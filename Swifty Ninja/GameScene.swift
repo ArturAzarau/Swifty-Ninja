@@ -9,7 +9,34 @@
 import SpriteKit
 import GameplayKit
 
-class GameScene: SKScene {
+final class GameScene: SKScene {
+    
+    // MARK: - Properties
+    
+    private var gameScore: SKLabelNode!
+    
+    // MARK: -
+    
+    private var score = 0 {
+        didSet {
+            gameScore.text = "Score: \(score)"
+        }
+    }
+    
+    // MARK: -
+    
+    private var livesImages = [SKSpriteNode]()
+    
+    // MARK: -
+    
+    private var lives = 3
+    
+    // MARK: -
+    
+    private var activeSliceBG: SKShapeNode!
+    private var activeSliceFG: SKShapeNode!
+    
+    // MARK: - View life cycle
     
     override func didMove(to view: SKView) {
         super.didMove(to: view)
@@ -20,6 +47,8 @@ class GameScene: SKScene {
         createLives()
         createSlices()
     }
+    
+    // MARK: - Handling touches
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
 
@@ -50,19 +79,56 @@ class GameScene: SKScene {
     // MARK: -
     
     private func createScore() {
+        gameScore = SKLabelNode(fontNamed: "Chalkduster")
+        gameScore.text = "Score = 0"
+        gameScore.fontSize = 48
+        gameScore.horizontalAlignmentMode = .left
+        addChild(gameScore)
         
+        gameScore.position = CGPoint(x: 8, y: 8)
     }
     
     // MARK: -
     
     private func createLives() {
-        
+        for i in stride(from: 834, through: 974, by: 70) {
+            let spriteNode = SKSpriteNode(imageNamed: "sliceLife")
+            spriteNode.position = CGPoint(x: i, y: 720)
+            addChild(spriteNode)
+            livesImages.append(spriteNode)
+        }
     }
     
     // MARK: -
     
     private func createSlices() {
+        let bgSlice = createBGSlice()
+        let fgSlice = createFGSlice()
         
+        addChild(bgSlice)
+        addChild(fgSlice)
+    }
+    
+    // MARK: - Helpers
+    
+    private func createBGSlice() -> SKShapeNode {
+        activeSliceBG = SKShapeNode()
+        activeSliceBG.zPosition = 2
+        activeSliceBG.strokeColor = UIColor(red: 1, green: 0.9, blue: 0, alpha: 1)
+        activeSliceBG.lineWidth = 9
+        
+        return activeSliceBG
+    }
+    
+    // MARK: -
+    
+    private func createFGSlice() -> SKShapeNode {
+        activeSliceFG = SKShapeNode()
+        activeSliceFG.zPosition = 2
+        activeSliceFG.strokeColor = UIColor.white
+        activeSliceFG.lineWidth = 5
+        
+        return activeSliceFG
     }
     
 }
