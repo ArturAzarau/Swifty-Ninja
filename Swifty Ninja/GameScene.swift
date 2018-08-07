@@ -33,6 +33,10 @@ final class GameScene: SKScene {
     
     // MARK: -
     
+    private var isSwooshSoundActive = false
+    
+    // MARK: -
+    
     private var activeSliceBG: SKShapeNode!
     private var activeSliceFG: SKShapeNode!
     private var activeSlicePoints = [CGPoint]()
@@ -75,6 +79,10 @@ final class GameScene: SKScene {
         activeSlicePoints.append(location)
         
         redrawActiveSlices()
+        
+        if !isSwooshSoundActive {
+            playSwooshSound()
+        }
     }
     
     // MARK: -
@@ -168,6 +176,19 @@ final class GameScene: SKScene {
         
         activeSliceBG.path = path.cgPath
         activeSliceFG.path = path.cgPath
+    }
+    
+    // MARK: -
+    
+    private func playSwooshSound() {
+        isSwooshSoundActive = true
+        let randomNumber = RandomInt(min: 1, max: 3)
+        let soundName = "swoosh\(randomNumber).caf"
+        let swooshSound = SKAction.playSoundFileNamed(soundName, waitForCompletion: true)
+        
+        run(swooshSound) { [unowned self] in
+            self.isSwooshSoundActive = false
+        }
     }
     
     // MARK: - Helpers
