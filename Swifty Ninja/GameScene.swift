@@ -94,7 +94,7 @@ final class GameScene: SKScene {
     // MARK: - Methods
     
     private func createBackground() {
-        let background = SKSpriteNode(imageNamed: "background")
+        let background = SKSpriteNode(imageNamed: "sliceBackground")
         background.position = CGPoint(x: 512, y: 384)
         background.zPosition = -1
         background.blendMode = .replace
@@ -149,7 +149,25 @@ final class GameScene: SKScene {
     // MARK: -
     
     private func redrawActiveSlices() {
+        if activeSlicePoints.count < 2 {
+            activeSliceBG.path = nil
+            activeSliceFG.path = nil
+            return
+        }
         
+        while activeSlicePoints.count > 12 {
+            activeSlicePoints.remove(at: 0)
+        }
+        
+        let path = UIBezierPath()
+        path.move(to: activeSlicePoints[0])
+        
+        for i in 1..<activeSlicePoints.count {
+            path.addLine(to: activeSlicePoints[i])
+        }
+        
+        activeSliceBG.path = path.cgPath
+        activeSliceFG.path = path.cgPath
     }
     
     // MARK: - Helpers
@@ -159,6 +177,7 @@ final class GameScene: SKScene {
         activeSliceBG.zPosition = 2
         activeSliceBG.strokeColor = UIColor(red: 1, green: 0.9, blue: 0, alpha: 1)
         activeSliceBG.lineWidth = 9
+        activeSliceBG.lineCap = .round
         
         return activeSliceBG
     }
@@ -170,7 +189,7 @@ final class GameScene: SKScene {
         activeSliceFG.zPosition = 2
         activeSliceFG.strokeColor = UIColor.white
         activeSliceFG.lineWidth = 5
-        
+        activeSliceFG.lineCap = .round
         return activeSliceFG
     }
     
