@@ -35,6 +35,7 @@ final class GameScene: SKScene {
     
     private var activeSliceBG: SKShapeNode!
     private var activeSliceFG: SKShapeNode!
+    private var activeSlicePoints = [CGPoint]()
     
     // MARK: - View life cycle
     
@@ -51,7 +52,43 @@ final class GameScene: SKScene {
     // MARK: - Handling touches
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-
+        super.touchesBegan(touches, with: event)
+        
+        activeSlicePoints.removeAll(keepingCapacity: true)
+        
+        if let touch = touches.first {
+            let location = touch.location(in: self)
+            activeSlicePoints.append(location)
+            redrawActiveSlices()
+            activeSliceBG.removeAllActions()
+            activeSliceFG.removeAllActions()
+            activeSliceBG.alpha = 1
+            activeSliceFG.alpha = 1
+        }
+    }
+    
+    // MARK: -
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = touches.first else { return }
+        let location = touch.location(in: self)
+        activeSlicePoints.append(location)
+        
+        redrawActiveSlices()
+    }
+    
+    // MARK: -
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        let fadeOutAction = SKAction.fadeOut(withDuration: 0.25)
+        activeSliceBG.run(fadeOutAction)
+        activeSliceFG.run(fadeOutAction)
+    }
+    
+    // MARK: -
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        touchesEnded(touches, with: event)
     }
     
     // MARK: - Methods
@@ -107,6 +144,12 @@ final class GameScene: SKScene {
         
         addChild(bgSlice)
         addChild(fgSlice)
+    }
+    
+    // MARK: -
+    
+    private func redrawActiveSlices() {
+        
     }
     
     // MARK: - Helpers
