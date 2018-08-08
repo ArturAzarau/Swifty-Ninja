@@ -48,6 +48,19 @@ final class GameScene: SKScene {
         case never, always, random
     }
     
+    // MARK: - Creating enemies
+    
+    private enum SequenceType: Int {
+        case oneNoBomb, one, twoWithOneBomb, two, three, four, chain, fastChain
+    }
+    
+    private var popupTime = 0.9
+    private var sequence: [SequenceType]!
+    private var sequencePosition = 0
+    private var chainDelay = 3.0
+    private var nextSequenceQueued = true
+    
+    
     // MARK: -
     
     private var activeEnemies = [SKSpriteNode]()
@@ -67,6 +80,7 @@ final class GameScene: SKScene {
         createScore()
         createLives()
         createSlices()
+        positionEnemies()
     }
     
     // MARK: - Handling touches
@@ -289,6 +303,64 @@ final class GameScene: SKScene {
                 bombSoundEffect = nil
             }
         }
+        
+        if activeEnemies.count > 0 {
+            activeEnemies.filter({$0.position.y < -140}).forEach {
+                $0.removeFromParent()
+                if let index = activeEnemies.index(of: $0) {
+                    activeEnemies.remove(at: index)
+                }
+            }
+        } else {
+            if !nextSequenceQueued {
+                DispatchQueue.main.asyncAfter(deadline: .now() + popupTime) { [unowned self] in
+                    self.tossEnemies()
+                }
+                nextSequenceQueued = true
+            }
+        }
+    }
+    
+    // MARK: -
+    
+    private func tossEnemies() {
+        popupTime *= 0.991
+        chainDelay *= 0.99
+        physicsWorld.speed *= 1.02
+        
+        let sequenceType = sequence[sequencePosition]
+        
+        switch sequenceType {
+        case .oneNoBomb:
+            createEnemy(forceBomb: .never)
+            
+        case .one:
+            createEnemy()
+            
+        case .twoWithOneBomb:
+            createEnemy(forceBomb: .never)
+            createEnemy(forceBomb: .always)
+            
+        case .two:
+            for _ in 0..<2 { createEnemy() }
+            
+        case .three:
+            for _ in 0..<3 { createEnemy() }
+            
+        case .four:
+            for _ in 0..<4 { createEnemy() }
+            
+        case .chain:
+            createEnemy()
+            for i in 1...4 { DispatchQueue.main.asyncAfter(deadline: .now() + (chainDelay / 5.0 * Double(i))) { [unowned self] in self.createEnemy() } }
+            
+        case .fastChain:
+            createEnemy()
+            for i in 1...4 { DispatchQueue.main.asyncAfter(deadline: .now() + (chainDelay / 10.0 * Double(i))) { [unowned self] in self.createEnemy() } }
+        }
+        
+        sequencePosition += 1
+        nextSequenceQueued = false
     }
     
     // MARK: - Helpers
@@ -314,4 +386,17 @@ final class GameScene: SKScene {
         return activeSliceFG
     }
     
+    // MARK: -
+    private func positionEnemies() {
+        sequence = [.oneNoBomb, .oneNoBomb, .twoWithOneBomb, .twoWithOneBomb, .three, .one, .chain]
+        
+        for _ in 0 ... 1000 {
+            let nextSequence = SequenceType(rawValue: RandomInt(min: 2, max: 7))!
+            sequence.append(nextSequence)
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [unowned self] in
+            self.tossEnemies()
+        }
+    }
 }
