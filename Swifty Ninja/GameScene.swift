@@ -69,6 +69,9 @@ final class GameScene: SKScene {
     
     private var bombSoundEffect: AVAudioPlayer!
     
+    // MARK: -
+    
+    private var gameEnded = false
     
     // MARK: - View life cycle
     
@@ -104,6 +107,7 @@ final class GameScene: SKScene {
     // MARK: -
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if gameEnded { return }
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
         activeSlicePoints.append(location)
@@ -112,6 +116,40 @@ final class GameScene: SKScene {
         
         if !isSwooshSoundActive {
             playSwooshSound()
+        }
+        
+        let nodesAtPoint = nodes(at: location)
+        for node in nodesAtPoint {
+            if node.name == "enemy" {
+                let emitter = SKEmitterNode(fileNamed: "sliceHitEnemy")!
+                emitter.position = node.position
+                addChild(emitter)
+                node.name = ""
+                node.physicsBody?.isDynamic = false
+                let scaleOut = SKAction.scale(to: 0.001, duration: 0.2)
+                let fadeOut = SKAction.fadeOut(withDuration: 0.2)
+                let group = SKAction.group([scaleOut,fadeOut])
+                let sequence = SKAction.sequence([group,SKAction.removeFromParent()])
+                node.run(sequence)
+                score += 1
+                if let index = activeEnemies.index(of: node as! SKSpriteNode) { activeEnemies.remove(at: index) }
+                run(SKAction.playSoundFileNamed("whack.caf", waitForCompletion: false))
+            } else if node.name == "bomb" {
+                let emitter = SKEmitterNode(fileNamed: "sliceHitBomb")!
+                emitter.position = node.parent!.position
+                addChild(emitter)
+                
+                node.name = ""
+                node.parent?.physicsBody?.isDynamic = false
+                let scaleOut = SKAction.scale(to: 0.001, duration: 0.2)
+                let fadeOut = SKAction.fadeOut(withDuration: 0.2)
+                let group = SKAction.group([scaleOut,fadeOut])
+                let sequence = SKAction.sequence([group,SKAction.removeFromParent()])
+                node.parent?.run(sequence)
+                if let index = activeEnemies.index(of: node.parent as! SKSpriteNode) { activeEnemies.remove(at: index) }
+                run(SKAction.playSoundFileNamed("explosion.caf", waitForCompletion: false))
+                endGame(triggeredByBomb: true)
+            }
         }
     }
     
@@ -261,13 +299,13 @@ final class GameScene: SKScene {
             
         } else {
             enemy = SKSpriteNode(imageNamed: "penguin")
-            run(SKAction.playSoundFileNamed("lauch.caf", waitForCompletion: false))
+            run(SKAction.playSoundFileNamed("launch.caf", waitForCompletion: false))
             enemy.name = "enemy"
         }
         
         // Positioning
         let randomPosition = CGPoint(x: RandomInt(min: 64, max: 960), y: -128)
-        enemy.position = position
+        enemy.position = randomPosition
         
         let randomAngularVelocity = CGFloat(RandomInt(min: -6, max: 6)) / 2.0
         var randomXVelocity = 0
@@ -306,10 +344,18 @@ final class GameScene: SKScene {
         
         if activeEnemies.count > 0 {
             activeEnemies.filter({$0.position.y < -140}).forEach {
-                $0.removeFromParent()
-                if let index = activeEnemies.index(of: $0) {
-                    activeEnemies.remove(at: index)
+                $0.removeAllActions()
+                if $0.name == "enemy" {
+                    $0.name = ""
+                    subtractLife()
+                    $0.removeFromParent()
+                    if let index = activeEnemies.index(of: $0) { activeEnemies.remove(at: index) }
+                } else if $0.name == "bombContainer" {
+                    $0.name = ""
+                    $0.removeFromParent()
+                    if let index = activeEnemies.index(of: $0) { activeEnemies.remove(at: index) }
                 }
+                
             }
         } else {
             if !nextSequenceQueued {
@@ -324,6 +370,7 @@ final class GameScene: SKScene {
     // MARK: -
     
     private func tossEnemies() {
+        if gameEnded { return }
         popupTime *= 0.991
         chainDelay *= 0.99
         physicsWorld.speed *= 1.02
@@ -361,6 +408,51 @@ final class GameScene: SKScene {
         
         sequencePosition += 1
         nextSequenceQueued = false
+    }
+    
+    // MARK: -
+    
+    private func endGame(triggeredByBomb: Bool) {
+        if gameEnded { return }
+        
+        gameEnded = true
+        physicsWorld.speed = 0
+        isUserInteractionEnabled = false
+        
+        if bombSoundEffect != nil {
+            bombSoundEffect.stop()
+            bombSoundEffect = nil
+        }
+        
+        if triggeredByBomb {
+            for i in 0...2 {
+                livesImages[i].texture = SKTexture(imageNamed: "sliceLifeGone")
+            }
+        }
+    }
+    
+    // MARK: -
+    
+    private func subtractLife() {
+        lives -= 1
+        run(SKAction.playSoundFileNamed("wrong.caf", waitForCompletion: false))
+        
+        var life: SKSpriteNode
+        
+        if lives == 2 {
+            life = livesImages[0]
+        } else if lives == 1 {
+            life = livesImages[1]
+        } else {
+            life = livesImages[2]
+            endGame(triggeredByBomb: false)
+        }
+        
+        life.texture = SKTexture(imageNamed: "sliceLifeGone")
+        life.xScale = 1.3
+        life.yScale = 1.3
+        
+        life.run(SKAction.scale(to: 1, duration: 0.1))
     }
     
     // MARK: - Helpers
